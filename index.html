@@ -39,12 +39,12 @@
 
     <section class="panel score-entry">
       <div class="section-heading">
-        <div><p class="eyebrow">SCORE TERMINAL</p><h2>Add or update a surveyor</h2></div>
-        <button class="ghost-btn" id="resetData" type="button">Reset sample data</button>
+        <div><p class="eyebrow">SCORE TERMINAL</p><h2>Update student score</h2></div>
+        <button class="ghost-btn" id="resetData" type="button">Reset scores</button>
       </div>
       <form id="scoreForm">
         <div class="form-grid">
-          <label class="field student-field"><span>Student name</span><input id="studentName" type="text" placeholder="Enter full name" required maxlength="40" autocomplete="off"></label>
+          <label class="field student-field"><span>Student name</span><select id="studentName" required><option value="">Select a student</option></select></label>
           <label class="field"><span>Introduction to Surveying</span><input class="score-input" id="topic1" type="number" min="0" max="20" value="0" required><small>/ 20</small></label>
           <label class="field"><span>Survey Equipment</span><input class="score-input" id="topic2" type="number" min="0" max="20" value="0" required><small>/ 20</small></label>
           <label class="field"><span>Datum and Coordinates</span><input class="score-input" id="topic3" type="number" min="0" max="20" value="0" required><small>/ 20</small></label>

@@ -54,6 +54,16 @@ function saveStudents() { localStorage.setItem(STORAGE_KEY, JSON.stringify(stude
 const totalOf = student => student.scores.reduce((sum, score) => sum + Number(score), 0);
 const initials = name => name.split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
 
+function syncStudentOptions() {
+  const select = document.querySelector("#studentName");
+  const selectedId = select.value;
+  select.innerHTML = `<option value="">Select a student</option>${[...students]
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .map(student => `<option value="${escapeHtml(String(student.id))}">${escapeHtml(String(student.id))} — ${escapeHtml(student.name)}</option>`)
+    .join("")}`;
+  if (students.some(student => String(student.id) === selectedId)) select.value = selectedId;
+}
+
 function badgeFor(total) {
   if (total >= 90) return { name: "Legend", icon: "◆", className: "legend" };
   if (total >= 80) return { name: "Master", icon: "★", className: "master" };
@@ -67,6 +77,7 @@ function rankedStudents() {
 }
 
 function render() {
+  syncStudentOptions();
   const ranked = rankedStudents();
   const query = searchInput.value.trim().toLowerCase();
   let visible = ranked.map((student, index) => ({ ...student, rank: index + 1 }));
@@ -79,7 +90,7 @@ function render() {
     const isEditing = String(student.id) === String(inlineEditingId);
     if (isEditing) return `<tr class="editing-row">
       <td><span class="rank">#${student.rank}</span></td>
-      <td><label class="inline-field"><span class="sr-only">Student name</span><input class="inline-name" type="text" value="${escapeHtml(student.name)}" maxlength="40" aria-label="Student name"></label></td>
+      <td><div class="student-cell editing-student"><span class="avatar table-avatar">${initials(student.name)}</span><div><strong>${escapeHtml(student.name)}</strong><small>${escapeHtml(String(student.id))} · DGU1B</small></div></div></td>
       ${student.scores.map((score, index) => `<td><label class="inline-field score-edit"><span class="sr-only">Topic ${index + 1} score</span><input class="inline-score" type="number" value="${score}" min="0" max="20" aria-label="Topic ${index + 1} score"><small>/20</small></label></td>`).join("")}
       <td class="edit-guidance" colspan="3"><strong>Edit mode</strong><small>Scores must be between 0 and 20.</small></td>
       <td class="row-actions"><button class="row-btn save-row" data-save="${student.id}">Save</button><button class="row-btn cancel-row" data-cancel="${student.id}">Cancel</button></td>
@@ -115,17 +126,14 @@ function updatePreview() {
 
 form.addEventListener("submit", event => {
   event.preventDefault();
-  const name = document.querySelector("#studentName").value.trim();
+  const studentId = document.querySelector("#studentName").value;
   const scores = TOPICS.map(id => Number(document.querySelector(`#${id}`).value));
-  if (!name || scores.some(score => score < 0 || score > 20 || !Number.isFinite(score))) return showToast("Enter scores from 0 to 20.");
-  if (editingId !== null) {
-    const student = students.find(item => item.id === editingId);
-    if (student) Object.assign(student, { name, scores });
-    showToast(`${name}'s score was updated.`);
-  } else {
-    students.push({ id: String(Date.now()), name, className: "DGU1B", scores });
-    showToast(`${name} joined the leaderboard.`);
-  }
+  if (!studentId) return showToast("Select a student first.");
+  if (scores.some(score => score < 0 || score > 20 || !Number.isFinite(score))) return showToast("Enter scores from 0 to 20.");
+  const student = students.find(item => String(item.id) === studentId);
+  if (!student) return showToast("The selected student could not be found.");
+  student.scores = scores;
+  showToast(`${student.name}'s score was updated.`);
   saveStudents(); resetForm(); render();
 });
 
@@ -137,19 +145,17 @@ body.addEventListener("click", event => {
   if (editButton) {
     inlineEditingId = editButton.dataset.edit;
     render();
-    body.querySelector(".inline-name")?.focus();
+    body.querySelector(".inline-score")?.focus();
   }
   if (saveButton) {
     const id = saveButton.dataset.save;
     const row = saveButton.closest("tr");
-    const name = row.querySelector(".inline-name").value.trim();
     const scores = [...row.querySelectorAll(".inline-score")].map(input => Number(input.value));
-    if (!name) return showToast("Please enter the student's name.");
     if (scores.some(score => !Number.isFinite(score) || score < 0 || score > 20)) return showToast("Each score must be between 0 and 20.");
     const student = students.find(item => String(item.id) === id);
-    if (student) Object.assign(student, { name, scores });
+    if (student) student.scores = scores;
     inlineEditingId = null;
-    saveStudents(); render(); showToast(`${name}'s details were saved.`);
+    saveStudents(); render(); showToast(`${student.name}'s scores were saved.`);
   }
   if (cancelButton) {
     inlineEditingId = null;
@@ -173,8 +179,15 @@ function resetForm() {
 }
 
 document.querySelector("#resetData").addEventListener("click", () => {
-  if (!confirm("Restore the original sample students and scores?")) return;
-  students = structuredClone(sampleStudents); saveStudents(); resetForm(); render(); showToast("Sample data restored.");
+  if (!confirm("Reset all five topic scores to zero for every student?")) return;
+  students = students.map(student => ({ ...student, scores: [0, 0, 0, 0, 0] }));
+  saveStudents(); resetForm(); render(); showToast("All student scores were reset to zero.");
+});
+
+document.querySelector("#studentName").addEventListener("change", event => {
+  const student = students.find(item => String(item.id) === event.target.value);
+  TOPICS.forEach((id, index) => document.querySelector(`#${id}`).value = student ? student.scores[index] : 0);
+  updatePreview();
 });
 
 function escapeHtml(value) { const element = document.createElement("div"); element.textContent = value; return element.innerHTML; }
