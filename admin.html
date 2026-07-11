@@ -90,7 +90,7 @@
           <label class="field"><span>Points per correct answer</span><input id="pointsPerCorrect" type="number" min="1" max="20" required></label>
           <label class="field"><span>Maximum attempts per topic</span><input id="maxAttempts" type="number" min="1" max="10" required></label>
           <label class="field"><span>Passing percentage</span><input id="passPercentage" type="number" min="0" max="100" required></label>
-          <label class="check-field"><input id="autoApplyScores" type="checkbox"><span>Apply quiz percentage automatically to topic score</span></label>
+          <label class="field"><span>Attempt scoring rule</span><select id="attemptRule" required><option value="first">First attempt</option><option value="highest">Highest score</option><option value="latest">Latest score</option></select></label>
           <button class="primary-btn" type="submit">Save scoring rules</button>
         </form>
       </article>

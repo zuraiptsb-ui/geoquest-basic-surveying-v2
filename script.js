@@ -2,11 +2,11 @@ const TOPICS = ["topic1", "topic2", "topic3", "topic4", "topic5"];
 const STORAGE_KEY = "geoquest-dcg10263-dgu1b-roster-v1";
 const ADMIN_SESSION_KEY = "geoquest-lecturer-auth";
 const LECTURER_PIN = "10263";
-const QUIZ_KEY = "geoquest-dcg10263-quizzes-v1";
+const QUIZ_KEY = "geoquest-dcg10263-quizzes-v2";
 const ATTEMPTS_KEY = "geoquest-dcg10263-attempts-v1";
 const RULES_KEY = "geoquest-dcg10263-rules-v1";
 const TOPIC_NAMES = ["Introduction to Surveying", "Survey Equipment", "Datum and Coordinates", "Traverse", "Land and Survey Agencies"];
-const DEFAULT_RULES = { pointsPerCorrect: 2, maxAttempts: 3, passPercentage: 50, autoApplyScores: true };
+const DEFAULT_RULES = { pointsPerCorrect: 2, maxAttempts: 3, passPercentage: 50, attemptRule: "highest" };
 const DEFAULT_QUIZZES = [
   { id: "q1", topic: 0, text: "What is the primary purpose of surveying?", options: ["Determine relative positions", "Forecast weather", "Design engines", "Test concrete only"], answer: 0 },
   { id: "q2", topic: 0, text: "Which principle requires working from whole to part?", options: ["Survey control", "Random sampling", "Levelling only", "Map colouring"], answer: 0 },
@@ -18,6 +18,46 @@ const DEFAULT_QUIZZES = [
   { id: "q8", topic: 3, text: "A closed traverse should satisfy which check?", options: ["Angular and linear closure", "Colour balance", "Paper size", "Weather tolerance"], answer: 0 },
   { id: "q9", topic: 4, text: "Which agency manages cadastral surveying in Malaysia?", options: ["JUPEM", "MARDI", "MOTAC", "JPJ"], answer: 0 },
   { id: "q10", topic: 4, text: "Land administration records primarily support what?", options: ["Ownership and interests", "Weather forecasts", "Vehicle licensing", "Marine biology"], answer: 0 }
+  ,{ id: "q11", topic: 0, text: "Which survey establishes points for later detailed work?", options: ["Control survey", "Hydrographic survey", "Mine survey", "Route survey"], answer: 0 }
+  ,{ id: "q12", topic: 0, text: "Plane surveying assumes the earth surface is what?", options: ["Flat over a limited area", "Perfectly spherical", "Always vertical", "Underwater"], answer: 0 }
+  ,{ id: "q13", topic: 0, text: "Geodetic surveying accounts for which factor?", options: ["Earth curvature", "Paper colour", "Instrument price", "Cloud type"], answer: 0 }
+  ,{ id: "q14", topic: 0, text: "A survey point permanently marked on the ground is called what?", options: ["Monument", "Contour", "Legend", "Scale"], answer: 0 }
+  ,{ id: "q15", topic: 0, text: "What should be done before field measurements begin?", options: ["Reconnaissance", "Final plotting", "Data deletion", "Map printing"], answer: 0 }
+  ,{ id: "q16", topic: 0, text: "Accuracy describes closeness to what?", options: ["The true value", "Repeated values only", "The field book", "The map border"], answer: 0 }
+  ,{ id: "q17", topic: 0, text: "Precision describes agreement among what?", options: ["Repeated measurements", "Different map colours", "Land titles", "Agency names"], answer: 0 }
+  ,{ id: "q18", topic: 0, text: "Survey field notes should be recorded when?", options: ["During observation", "Several weeks later", "After deletion", "Only after plotting"], answer: 0 }
+  ,{ id: "q19", topic: 1, text: "Which equipment provides a vertical reference line?", options: ["Plumb bob", "Prism", "Tripod", "Staff bubble"], answer: 0 }
+  ,{ id: "q20", topic: 1, text: "A ranging rod is mainly used to do what?", options: ["Mark and align points", "Measure angles", "Store coordinates", "Calculate areas"], answer: 0 }
+  ,{ id: "q21", topic: 1, text: "What does EDM measure electronically?", options: ["Distance", "Temperature", "Area", "Pressure"], answer: 0 }
+  ,{ id: "q22", topic: 1, text: "Why is a tripod used?", options: ["Provide stable instrument support", "Measure chain length", "Record field notes", "Mark a boundary permanently"], answer: 0 }
+  ,{ id: "q23", topic: 1, text: "Which instrument combines angle and distance measurement?", options: ["Total station", "Optical square", "Tape", "Level staff"], answer: 0 }
+  ,{ id: "q24", topic: 1, text: "A prism is commonly paired with which equipment?", options: ["Total station", "Planimeter", "Compass only", "Drawing board"], answer: 0 }
+  ,{ id: "q25", topic: 1, text: "The circular bubble helps an instrument become what?", options: ["Approximately level", "Magnetized", "Waterproof", "Calibrated in distance"], answer: 0 }
+  ,{ id: "q26", topic: 1, text: "GNSS equipment determines position using what?", options: ["Satellite signals", "Tidal gauges", "Magnetic tape", "Contour lines"], answer: 0 }
+  ,{ id: "q27", topic: 2, text: "A benchmark provides a known value of what?", options: ["Elevation", "Bearing only", "Area", "Temperature"], answer: 0 }
+  ,{ id: "q28", topic: 2, text: "Easting values normally increase toward which direction?", options: ["East", "West", "Down", "South only"], answer: 0 }
+  ,{ id: "q29", topic: 2, text: "Northing values normally increase toward which direction?", options: ["North", "East", "West", "Down"], answer: 0 }
+  ,{ id: "q30", topic: 2, text: "A vertical datum is used mainly for what?", options: ["Heights", "Colours", "Ownership", "Instrument serial numbers"], answer: 0 }
+  ,{ id: "q31", topic: 2, text: "A horizontal datum supports which information?", options: ["Plan positions", "Weather data", "Material strength", "Time zones"], answer: 0 }
+  ,{ id: "q32", topic: 2, text: "Latitude is measured north or south of what?", options: ["The equator", "Prime meridian", "A benchmark", "A traverse line"], answer: 0 }
+  ,{ id: "q33", topic: 2, text: "Longitude is measured east or west of what?", options: ["The prime meridian", "The equator", "Mean sea level", "A contour"], answer: 0 }
+  ,{ id: "q34", topic: 2, text: "GDM2000 is an example of what?", options: ["Geodetic datum", "Survey instrument", "Land office", "Distance unit"], answer: 0 }
+  ,{ id: "q35", topic: 3, text: "A traverse station is a point where what is observed?", options: ["Angles and distances", "Only rainfall", "Only ownership", "Only contour colour"], answer: 0 }
+  ,{ id: "q36", topic: 3, text: "An open traverse ends where?", options: ["At an unverified point", "At its starting point", "At two known points", "At mean sea level"], answer: 0 }
+  ,{ id: "q37", topic: 3, text: "A closed-loop traverse ends at what?", options: ["Its starting point", "An unknown elevation", "A random point", "A map legend"], answer: 0 }
+  ,{ id: "q38", topic: 3, text: "Angular misclosure is distributed by what process?", options: ["Adjustment", "Ranging", "Levelling", "Scaling"], answer: 0 }
+  ,{ id: "q39", topic: 3, text: "The Bowditch rule adjusts which quantities?", options: ["Latitudes and departures", "Map titles", "Instrument heights only", "Parcel names"], answer: 0 }
+  ,{ id: "q40", topic: 3, text: "Departure represents the component in which direction?", options: ["East-west", "North-south", "Vertical", "Radial only"], answer: 0 }
+  ,{ id: "q41", topic: 3, text: "Latitude in traverse computation represents which component?", options: ["North-south", "East-west", "Vertical angle", "Slope distance"], answer: 0 }
+  ,{ id: "q42", topic: 3, text: "Relative precision is commonly expressed as what?", options: ["A ratio", "A colour", "A date", "A temperature"], answer: 0 }
+  ,{ id: "q43", topic: 4, text: "What does JUPEM stand for in English?", options: ["Department of Survey and Mapping Malaysia", "Department of Roads Malaysia", "Land Tax Board", "National Housing Agency"], answer: 0 }
+  ,{ id: "q44", topic: 4, text: "A cadastral survey primarily defines what?", options: ["Legal parcel boundaries", "Weather zones", "Road speed", "Soil chemistry"], answer: 0 }
+  ,{ id: "q45", topic: 4, text: "Which office commonly handles land registration?", options: ["Land Office", "Post Office", "Health Office", "Tourism Office"], answer: 0 }
+  ,{ id: "q46", topic: 4, text: "A certified plan records what?", options: ["Approved cadastral survey information", "Daily weather", "Vehicle ownership", "Exam attendance"], answer: 0 }
+  ,{ id: "q47", topic: 4, text: "Licensed land surveyors are authorized to perform what?", options: ["Cadastral surveys", "Medical surveys", "Vehicle inspections", "Weather forecasts"], answer: 0 }
+  ,{ id: "q48", topic: 4, text: "Land title information identifies what?", options: ["Registered interests in land", "Instrument calibration", "Rainfall totals", "Satellite orbits"], answer: 0 }
+  ,{ id: "q49", topic: 4, text: "State land matters in Malaysia generally fall under whose authority?", options: ["State authority", "Airline authority", "School board", "Port operator"], answer: 0 }
+  ,{ id: "q50", topic: 4, text: "A boundary mark should be protected because it provides what?", options: ["Legal survey evidence", "Weather protection", "Traffic control", "Electrical power"], answer: 0 }
 ];
 
 const OFFICIAL_STUDENTS = [
@@ -56,7 +96,7 @@ const OFFICIAL_STUDENTS = [
 let students = loadStudents();
 let quizzes = loadJson(QUIZ_KEY, DEFAULT_QUIZZES);
 let attempts = loadJson(ATTEMPTS_KEY, []);
-let rules = loadJson(RULES_KEY, DEFAULT_RULES);
+let rules = { ...DEFAULT_RULES, ...loadJson(RULES_KEY, DEFAULT_RULES) };
 const pageType = document.body.dataset.page;
 const body = document.querySelector("#leaderboardBody");
 const searchInput = document.querySelector("#searchInput");
@@ -307,12 +347,12 @@ function loadRulesForm() {
   document.querySelector("#pointsPerCorrect").value = rules.pointsPerCorrect;
   document.querySelector("#maxAttempts").value = rules.maxAttempts;
   document.querySelector("#passPercentage").value = rules.passPercentage;
-  document.querySelector("#autoApplyScores").checked = Boolean(rules.autoApplyScores);
+  document.querySelector("#attemptRule").value = rules.attemptRule || "highest";
 }
 
 function saveRules(event) {
   event.preventDefault();
-  rules = { pointsPerCorrect: Number(document.querySelector("#pointsPerCorrect").value), maxAttempts: Number(document.querySelector("#maxAttempts").value), passPercentage: Number(document.querySelector("#passPercentage").value), autoApplyScores: document.querySelector("#autoApplyScores").checked };
+  rules = { pointsPerCorrect: Number(document.querySelector("#pointsPerCorrect").value), maxAttempts: Number(document.querySelector("#maxAttempts").value), passPercentage: Number(document.querySelector("#passPercentage").value), attemptRule: document.querySelector("#attemptRule").value };
   localStorage.setItem(RULES_KEY, JSON.stringify(rules)); showToast("Scoring rules saved.");
 }
 
@@ -357,15 +397,24 @@ function submitQuiz(event) {
   const studentId = document.querySelector("#quizStudent").value;
   const topic = Number(document.querySelector("#quizTopic").value);
   const topicQuestions = quizzes.filter(question => question.topic === topic);
+  const submissionKey = `${studentId}-${topic}-${topicQuestions.map(question => document.querySelector(`input[name="answer-${question.id}"]:checked`)?.value ?? "x").join("")}`;
+  const previousSubmission = JSON.parse(sessionStorage.getItem("geoquest-last-submission") || "null");
+  if (previousSubmission?.key === submissionKey && Date.now() - previousSubmission.time < 30000) return showToast("This submission was already received.");
+  sessionStorage.setItem("geoquest-last-submission", JSON.stringify({ key: submissionKey, time: Date.now() }));
   let correct = 0;
   topicQuestions.forEach(question => { const choice = document.querySelector(`input[name="answer-${question.id}"]:checked`); if (Number(choice?.value) === question.answer) correct++; });
   const percentage = Math.round((correct / topicQuestions.length) * 100);
   const student = students.find(item => item.id === studentId);
   const attempt = { id: Date.now(), date: new Date().toISOString(), studentId, studentName: student.name, topic, correct, total: topicQuestions.length, points: correct * rules.pointsPerCorrect, percentage, passed: percentage >= rules.passPercentage };
   attempts.push(attempt); localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts));
-  if (rules.autoApplyScores) { student.scores[topic] = Math.round(percentage / 5); saveStudents(); }
+  const topicAttempts = attempts.filter(item => item.studentId === studentId && item.topic === topic);
+  let scoringAttempt = topicAttempts[topicAttempts.length - 1];
+  if (rules.attemptRule === "first") scoringAttempt = topicAttempts[0];
+  if (rules.attemptRule === "highest") scoringAttempt = topicAttempts.reduce((best, item) => item.percentage > best.percentage ? item : best, topicAttempts[0]);
+  student.scores[topic] = Math.round(scoringAttempt.percentage / 5);
+  saveStudents();
   document.querySelector("#quizPanel").hidden = true; document.querySelector("#resultPanel").hidden = false;
-  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Mission passed" : "More practice required"}</span></div><div class="result-details"><p><span>Correct answers</span><strong>${correct} / ${topicQuestions.length}</strong></p><p><span>Points earned</span><strong>${attempt.points}</strong></p><p><span>Topic score</span><strong>${student.scores[topic]} / 20</strong></p></div>`;
+  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
 }
 
 if (pageType === "admin") initializeAdminPage();
