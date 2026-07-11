@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#07152f">
+  <title>GeoQuest Student Quiz | DCG10263</title><meta name="description" content="Topic quizzes for DCG10263 Basic Surveying."><link rel="stylesheet" href="style.css">
+</head>
+<body data-page="quiz">
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <main class="app-shell">
+    <header class="hero panel quiz-hero"><div class="hero-content"><div class="course-flag"><span class="signal"></span><span>Diploma in Geomatics</span><i>Student Assessment</i></div><p class="eyebrow">DCG10263 · BASIC SURVEYING</p><h1>GeoQuest <span>Topic Quiz</span></h1><p class="hero-copy">Confirm your identity, choose a topic, and test your field knowledge.</p></div><a class="ghost-btn button-link" href="index.html">View leaderboard</a></header>
+    <div class="telemetry" aria-hidden="true"><span>CLASS: DGU1B</span><span>MODE: QUIZ</span><span>STATUS: <b>ONLINE</b></span><span>TOPICS: 05</span></div>
+    <section class="panel quiz-setup">
+      <div class="section-heading"><div><p class="eyebrow">IDENTITY CHECK</p><h2>Start a quiz mission</h2></div></div>
+      <div class="quiz-select-grid"><label class="field"><span>Student name and ID</span><select id="quizStudent" required><option value="">Select your name</option></select></label><label class="field"><span>Quiz topic</span><select id="quizTopic" required></select></label><button id="loadQuiz" class="primary-btn" type="button">Load quiz</button></div>
+      <p id="attemptNotice" class="section-note"></p>
+    </section>
+    <section id="quizPanel" class="panel quiz-panel" hidden><form id="quizForm"><div class="section-heading"><div><p class="eyebrow">ACTIVE MISSION</p><h2 id="activeTopic">Topic quiz</h2></div><span id="quizQuestionCount" class="module-count"></span></div><div id="quizQuestions" class="quiz-questions"></div><button class="primary-btn quiz-submit" type="submit">Submit answers</button></form></section>
+    <section id="resultPanel" class="panel result-panel" hidden><p class="eyebrow">MISSION RESULT</p><div id="resultContent"></div><button id="retryQuiz" class="ghost-btn" type="button">Choose another quiz</button></section>
+    <footer><p>GeoQuest · Student Quiz</p><span>DCG10263 Basic Surveying · DGU1B</span></footer>
+  </main><div id="toast" class="toast" role="status" aria-live="polite"></div><script src="script.js"></script>
+</body>
+</html>

@@ -71,6 +71,36 @@
       <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Intro</th><th>Equipment</th><th>Datum</th><th>Traverse</th><th>Agencies</th><th>Progress</th><th>Total</th><th>Badge</th></tr></thead><tbody id="leaderboardBody"></tbody></table><p id="emptyState" class="empty-state" hidden>No students match your search.</p></div>
     </section>
 
+    <section class="admin-grid">
+      <article class="panel admin-module">
+        <div class="section-heading"><div><p class="eyebrow">QUIZ CONTROL</p><h2>Manage quizzes</h2></div><span id="questionCount" class="module-count">0 questions</span></div>
+        <form id="quizManagerForm" class="stack-form">
+          <label class="field"><span>Topic</span><select id="questionTopic" required></select></label>
+          <label class="field"><span>Question</span><input id="questionText" type="text" required placeholder="Enter question"></label>
+          <div class="option-grid"><label class="field"><span>Option A</span><input id="optionA" required></label><label class="field"><span>Option B</span><input id="optionB" required></label><label class="field"><span>Option C</span><input id="optionC" required></label><label class="field"><span>Option D</span><input id="optionD" required></label></div>
+          <label class="field"><span>Correct answer</span><select id="correctAnswer" required><option value="0">Option A</option><option value="1">Option B</option><option value="2">Option C</option><option value="3">Option D</option></select></label>
+          <button class="primary-btn" type="submit">Add quiz question</button>
+        </form>
+        <div id="questionList" class="question-list"></div>
+      </article>
+
+      <article class="panel admin-module">
+        <div class="section-heading"><div><p class="eyebrow">SCORING ENGINE</p><h2>Configure rules</h2></div></div>
+        <form id="rulesForm" class="stack-form">
+          <label class="field"><span>Points per correct answer</span><input id="pointsPerCorrect" type="number" min="1" max="20" required></label>
+          <label class="field"><span>Maximum attempts per topic</span><input id="maxAttempts" type="number" min="1" max="10" required></label>
+          <label class="field"><span>Passing percentage</span><input id="passPercentage" type="number" min="0" max="100" required></label>
+          <label class="check-field"><input id="autoApplyScores" type="checkbox"><span>Apply quiz percentage automatically to topic score</span></label>
+          <button class="primary-btn" type="submit">Save scoring rules</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="leaderboard-section panel">
+      <div class="section-heading"><div><p class="eyebrow">ATTEMPT LOG</p><h2>Student quiz attempts</h2></div><button id="clearAttempts" class="danger-btn" type="button">Clear attempts</button></div>
+      <div class="table-wrap"><table class="attempt-table"><thead><tr><th>Date</th><th>Student</th><th>Topic</th><th>Correct</th><th>Result</th><th>Status</th></tr></thead><tbody id="attemptBody"></tbody></table><p id="attemptEmpty" class="empty-state">No quiz attempts yet.</p></div>
+    </section>
+
     <footer><p>GeoQuest · Lecturer Administration</p><span>Scores are saved on this device</span></footer>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
