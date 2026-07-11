@@ -6,6 +6,13 @@ const QUIZ_KEY = "geoquest-dcg10263-quizzes-v2";
 const ATTEMPTS_KEY = "geoquest-dcg10263-attempts-v1";
 const RULES_KEY = "geoquest-dcg10263-rules-v1";
 const TOPIC_NAMES = ["Introduction to Surveying", "Survey Equipment", "Datum and Coordinates", "Traverse", "Land and Survey Agencies"];
+const TOPIC_BADGES = [
+  { name: "Surveying Explorer", icon: "⌖", description: "Mastered surveying foundations." },
+  { name: "Total Station Specialist", icon: "◉", description: "Mastered survey equipment." },
+  { name: "Datum Navigator", icon: "◇", description: "Mastered datum and coordinates." },
+  { name: "Traverse Champion", icon: "△", description: "Mastered traverse computation." },
+  { name: "Land Agency Expert", icon: "▣", description: "Mastered land and survey agencies." }
+];
 const DEFAULT_RULES = { pointsPerCorrect: 2, maxAttempts: 3, passPercentage: 50, attemptRule: "highest" };
 const DEFAULT_QUIZZES = [
   { id: "q1", topic: 0, text: "What is the primary purpose of surveying?", options: ["Determine relative positions", "Forecast weather", "Design engines", "Test concrete only"], answer: 0 },
@@ -142,6 +149,14 @@ function badgeFor(total) {
   return { name: "Survey Rookie", icon: "⬡", className: "rookie", description: "Beginning the GeoQuest surveying journey." };
 }
 
+function topicBadgesFor(student) {
+  return TOPIC_BADGES.map((badge, index) => ({ ...badge, topic: index, percentage: student.scores[index] * 5, earned: student.scores[index] >= 16 }));
+}
+
+function renderTopicBadges(student, detailed = false) {
+  return topicBadgesFor(student).map(badge => `<div class="topic-achievement ${badge.earned ? "earned" : "locked"}" title="${escapeHtml(badge.name)}: ${badge.percentage}%"><span class="topic-icon">${badge.earned ? badge.icon : "⌑"}</span><div><strong>${badge.name}</strong>${detailed ? `<small>${badge.earned ? badge.description : `Locked · ${badge.percentage}% of 80%`}</small>` : ""}<i><b style="width:${Math.min(100, badge.percentage / .8)}%"></b></i></div><em>${badge.earned ? "Earned" : `${badge.percentage}%`}</em></div>`).join("");
+}
+
 function rankedStudents() {
   return [...students].sort((a, b) => totalOf(b) - totalOf(a) || a.name.localeCompare(b.name));
 }
@@ -165,6 +180,7 @@ function renderLeaderboard() {
       <td class="progress-cell"><div class="progress-label"><span>Progress</span><span>${total}%</span></div><div class="progress-track"><i style="width:${total}%"></i></div></td>
       <td class="total-cell"><strong>${total}</strong><small>${total}%</small></td>
       <td><div class="achievement-badge"><span class="badge badge-${badge.className}">${badge.icon}</span><span><strong>${badge.name}</strong><small>${badge.description}</small></span></div></td>
+      <td><div class="topic-badge-strip">${renderTopicBadges(student)}</div></td>
     </tr>`;
   }).join("");
 
@@ -411,11 +427,22 @@ function submitQuiz(event) {
   let scoringAttempt = topicAttempts[topicAttempts.length - 1];
   if (rules.attemptRule === "first") scoringAttempt = topicAttempts[0];
   if (rules.attemptRule === "highest") scoringAttempt = topicAttempts.reduce((best, item) => item.percentage > best.percentage ? item : best, topicAttempts[0]);
+  const badgeWasEarned = student.scores[topic] >= 16;
   student.scores[topic] = Math.round(scoringAttempt.percentage / 5);
+  const badgeNowEarned = student.scores[topic] >= 16;
   saveStudents();
   document.querySelector("#quizPanel").hidden = true; document.querySelector("#resultPanel").hidden = false;
   const overallBadge = badgeFor(totalOf(student));
-  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><div class="quiz-achievement badge-${overallBadge.className}"><span class="achievement-icon">${overallBadge.icon}</span><div><small>Overall achievement</small><strong>${overallBadge.name}</strong><p>${overallBadge.description}</p></div></div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
+  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><div class="quiz-achievement badge-${overallBadge.className}"><span class="achievement-icon">${overallBadge.icon}</span><div><small>Overall achievement</small><strong>${overallBadge.name}</strong><p>${overallBadge.description}</p></div></div><div class="quiz-topic-badges">${renderTopicBadges(student, true)}</div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
+  if (!badgeWasEarned && badgeNowEarned) celebrateTopicBadge(TOPIC_BADGES[topic]);
+}
+
+function celebrateTopicBadge(badge) {
+  const celebration = document.createElement("div");
+  celebration.className = "badge-celebration";
+  celebration.innerHTML = `<div><span>${badge.icon}</span><small>New topic badge earned</small><strong>${badge.name}</strong></div>${Array.from({ length: 12 }, (_, index) => `<i style="--i:${index}"></i>`).join("")}`;
+  document.body.appendChild(celebration);
+  setTimeout(() => celebration.remove(), 2800);
 }
 
 if (pageType === "admin") initializeAdminPage();
