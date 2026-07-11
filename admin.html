@@ -17,8 +17,9 @@
       <div class="login-emblem" aria-hidden="true">⌖</div>
       <p class="eyebrow"><span class="signal"></span> RESTRICTED TERMINAL</p>
       <h1>Lecturer <span>Access</span></h1>
-      <p class="login-copy">Enter your lecturer PIN to access score controls.</p>
-      <label class="field"><span>Lecturer PIN</span><input id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="10" required autofocus aria-describedby="pinError"></label>
+      <p class="login-copy">Sign in with your Firebase lecturer account.</p>
+      <label class="field"><span>Lecturer email</span><input id="lecturerEmail" type="email" required autocomplete="username" autofocus></label>
+      <label class="field"><span>Password</span><input id="pinInput" type="password" required autocomplete="current-password" aria-describedby="pinError"></label>
       <p id="pinError" class="pin-error" role="alert"></p>
       <button class="primary-btn login-btn" type="submit">Unlock admin terminal</button>
       <a class="back-link" href="index.html">← Return to student leaderboard</a>
@@ -51,6 +52,11 @@
         <a class="ghost-btn button-link" href="index.html">View leaderboard</a>
       </div>
       <form id="scoreForm">
+        <div class="option-grid roster-manager">
+          <label class="field"><span>New matrix number</span><input id="newStudentId" type="text" placeholder="16DGU26F0000"></label>
+          <label class="field"><span>New student name</span><input id="newStudentName" type="text" placeholder="Full name"></label>
+          <button id="addStudent" class="ghost-btn" type="button">Add student</button>
+        </div>
         <div class="form-grid">
           <label class="field student-field"><span>Student name</span><select id="studentName" required><option value="">Select a student</option></select></label>
           <label class="field"><span>Introduction to Surveying</span><input class="score-input" id="topic1" type="number" min="0" max="20" value="0" required><small>/ 20</small></label>
@@ -61,7 +67,7 @@
         </div>
         <div class="form-footer admin-form-footer">
           <div class="live-total"><span>Projected total</span><strong><span id="previewTotal">0</span> / 100</strong><div class="mini-track"><i id="previewBar"></i></div></div>
-          <div class="admin-buttons"><button class="danger-btn" id="resetSelected" type="button">Reset selected student</button><button class="danger-btn danger-all" id="resetAll" type="button">Reset all scores</button><button class="primary-btn" id="submitButton" type="submit">Update score</button></div>
+          <div class="admin-buttons"><button class="danger-btn" id="deleteSelected" type="button">Delete selected</button><button class="danger-btn" id="resetSelected" type="button">Reset selected student</button><button class="danger-btn danger-all" id="resetAll" type="button">Reset leaderboard</button><button class="primary-btn" id="submitButton" type="submit">Update score</button></div>
         </div>
       </form>
     </section>
@@ -104,6 +110,6 @@
     <footer><p>GeoQuest · Lecturer Administration</p><span>Scores are saved on this device</span></footer>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

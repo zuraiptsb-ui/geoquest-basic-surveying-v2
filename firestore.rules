@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isLecturer() {
+      return request.auth != null && exists(/databases/$(database)/documents/lecturers/$(request.auth.uid));
+    }
+
+    match /lecturers/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Leaderboard information is public and updates in real time.
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update, delete: if isLecturer();
+    }
+
+    match /rankings/{studentId} {
+      allow read: if true;
+      allow write: if isLecturer();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow write: if isLecturer();
+    }
+
+    match /quizzes/{questionId} {
+      allow read: if true;
+      allow write: if isLecturer();
+    }
+
+    match /attempts/{attemptId} {
+      allow read: if isLecturer();
+      allow create: if request.auth != null;
+      allow update, delete: if isLecturer();
+    }
+
+    match /settings/{documentId} {
+      allow read: if true;
+      allow write: if isLecturer();
+    }
+  }
+}

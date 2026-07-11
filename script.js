@@ -1,7 +1,7 @@
+import { lecturerAuth, studentAuth, geoquestStore } from "./firebase-service.js";
+
 const TOPICS = ["topic1", "topic2", "topic3", "topic4", "topic5"];
 const STORAGE_KEY = "geoquest-dcg10263-dgu1b-roster-v1";
-const ADMIN_SESSION_KEY = "geoquest-lecturer-auth";
-const LECTURER_PIN = "10263";
 const QUIZ_KEY = "geoquest-dcg10263-quizzes-v2";
 const ATTEMPTS_KEY = "geoquest-dcg10263-attempts-v1";
 const RULES_KEY = "geoquest-dcg10263-rules-v1";
@@ -100,28 +100,16 @@ const OFFICIAL_STUDENTS = [
   { id: "16DGU26F1117", name: "NUR ALYA IRDINA BINTI MOHAMAD ANUAR", className: "DGU1B", scores: [0, 0, 0, 0, 0] }
 ];
 
-let students = loadStudents();
-let quizzes = loadJson(QUIZ_KEY, DEFAULT_QUIZZES);
-let attempts = loadJson(ATTEMPTS_KEY, []);
-let rules = { ...DEFAULT_RULES, ...loadJson(RULES_KEY, DEFAULT_RULES) };
+let students = structuredClone(OFFICIAL_STUDENTS);
+let quizzes = structuredClone(DEFAULT_QUIZZES);
+let attempts = [];
+let rules = structuredClone(DEFAULT_RULES);
 const pageType = document.body.dataset.page;
 const body = document.querySelector("#leaderboardBody");
 const searchInput = document.querySelector("#searchInput");
 
 function loadStudents() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!Array.isArray(saved)) return structuredClone(OFFICIAL_STUDENTS);
-    return OFFICIAL_STUDENTS.map(rosterStudent => {
-      const savedStudent = saved.find(student => String(student.id) === rosterStudent.id);
-      return savedStudent ? { ...rosterStudent, scores: normalizeScores(savedStudent.scores) } : structuredClone(rosterStudent);
-    });
-  } catch { return structuredClone(OFFICIAL_STUDENTS); }
-}
-
-function loadJson(key, fallback) {
-  try { const value = JSON.parse(localStorage.getItem(key)); return value ?? structuredClone(fallback); }
-  catch { return structuredClone(fallback); }
+  return structuredClone(OFFICIAL_STUDENTS);
 }
 
 function normalizeScores(scores) {
@@ -129,7 +117,19 @@ function normalizeScores(scores) {
 }
 
 function saveStudents() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+  const ranked = rankedStudents();
+  return geoquestStore.saveLeaderboard(ranked.map((student, index) => ({ ...student, scores: normalizeScores(student.scores), rank: index + 1, total: totalOf(student), percentage: totalOf(student), badge: badgeFor(totalOf(student)), topicBadges: topicBadgesFor(student) })));
+}
+
+function connectRealtime({ includeAttempts = false } = {}) {
+  geoquestStore.watchStudents(records => {
+    if (records.length) students = records.map(student => ({ ...student, scores: normalizeScores(student.scores) }));
+    renderLeaderboard();
+    if (pageType === "quiz") initializeQuizStudentOptions();
+  });
+  geoquestStore.watchQuizzes(records => { if (records.length) quizzes = records; renderQuestionManager(); });
+  geoquestStore.watchRules(value => { if (value) rules = { ...DEFAULT_RULES, ...value }; if (pageType === "admin") loadRulesForm(); });
+  if (includeAttempts) geoquestStore.watchAttempts(records => { attempts = records; renderAttempts(); });
 }
 
 const totalOf = student => student.scores.reduce((sum, score) => sum + Number(score), 0);
@@ -216,11 +216,9 @@ function showToast(message) {
 
 function initializeStudentPage() {
   renderLeaderboard();
+  connectRealtime();
   searchInput?.addEventListener("input", renderLeaderboard);
   document.querySelector("#topTenToggle")?.addEventListener("change", renderLeaderboard);
-  window.addEventListener("storage", event => {
-    if (event.key === STORAGE_KEY) { students = loadStudents(); renderLeaderboard(); }
-  });
 }
 
 function initializeAdminPage() {
@@ -228,6 +226,7 @@ function initializeAdminPage() {
   const adminApp = document.querySelector("#adminApp");
   const pinForm = document.querySelector("#pinForm");
   const pinInput = document.querySelector("#pinInput");
+  const emailInput = document.querySelector("#lecturerEmail");
   const pinError = document.querySelector("#pinError");
 
   function unlockAdmin() {
@@ -242,23 +241,23 @@ function initializeAdminPage() {
     loadRulesForm();
   }
 
-  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "authorized") unlockAdmin();
-
-  pinForm.addEventListener("submit", event => {
-    event.preventDefault();
-    if (pinInput.value !== LECTURER_PIN) {
-      pinError.textContent = "Incorrect PIN. Access denied.";
-      pinInput.value = "";
-      pinInput.focus();
-      return;
+  lecturerAuth.observe(async user => {
+    if (lecturerAuth.isLecturer(user)) {
+      const seedStudents = OFFICIAL_STUDENTS.map((student, index) => ({ ...student, rank: index + 1, total: 0, percentage: 0, badge: badgeFor(0), topicBadges: topicBadgesFor(student) }));
+      await geoquestStore.seed({ students: seedStudents, quizzes: DEFAULT_QUIZZES, rules: DEFAULT_RULES, badges: TOPIC_BADGES });
+      connectRealtime({ includeAttempts: true });
+      unlockAdmin();
     }
-    sessionStorage.setItem(ADMIN_SESSION_KEY, "authorized");
-    pinError.textContent = "";
-    unlockAdmin();
   });
 
-  document.querySelector("#logoutButton").addEventListener("click", () => {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  pinForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    try { await lecturerAuth.signIn(emailInput.value.trim(), pinInput.value); pinError.textContent = ""; }
+    catch { pinError.textContent = "Invalid lecturer email or password."; pinInput.value = ""; pinInput.focus(); }
+  });
+
+  document.querySelector("#logoutButton").addEventListener("click", async () => {
+    await lecturerAuth.signOut();
     document.body.classList.add("locked");
     pinGate.hidden = false;
     adminApp.setAttribute("aria-hidden", "true");
@@ -271,6 +270,8 @@ function initializeAdminPage() {
   document.querySelector("#scoreForm").addEventListener("submit", updateSelectedScore);
   document.querySelector("#resetSelected").addEventListener("click", resetSelectedScore);
   document.querySelector("#resetAll").addEventListener("click", resetAllScores);
+  document.querySelector("#addStudent").addEventListener("click", addStudent);
+  document.querySelector("#deleteSelected").addEventListener("click", deleteSelectedStudent);
   searchInput.addEventListener("input", renderLeaderboard);
   document.querySelector("#quizManagerForm").addEventListener("submit", addQuestion);
   document.querySelector("#questionList").addEventListener("click", deleteQuestion);
@@ -332,6 +333,28 @@ function resetAllScores() {
   showToast("All student scores were reset to zero.");
 }
 
+async function addStudent() {
+  const id = document.querySelector("#newStudentId").value.trim().toUpperCase();
+  const name = document.querySelector("#newStudentName").value.trim().toUpperCase();
+  if (!id || !name) return showToast("Enter the matrix number and full name.");
+  if (students.some(student => student.id === id)) return showToast("That matrix number already exists.");
+  students.push({ id, name, className: "DGU1B", scores: [0, 0, 0, 0, 0] });
+  await saveStudents();
+  document.querySelector("#newStudentId").value = "";
+  document.querySelector("#newStudentName").value = "";
+  syncStudentOptions(); renderLeaderboard(); showToast(`${name} was added.`);
+}
+
+async function deleteSelectedStudent() {
+  const id = document.querySelector("#studentName").value;
+  const student = students.find(item => item.id === id);
+  if (!student) return showToast("Select a student first.");
+  if (!confirm(`Delete ${student.name} from the leaderboard?`)) return;
+  await geoquestStore.deleteStudent(id);
+  students = students.filter(item => item.id !== id);
+  syncStudentOptions(); renderLeaderboard(); showToast("Student deleted.");
+}
+
 function topicOptions(selected = 0) {
   return TOPIC_NAMES.map((name, index) => `<option value="${index}"${index === Number(selected) ? " selected" : ""}>Topic ${index + 1} — ${name}</option>`).join("");
 }
@@ -348,7 +371,7 @@ function addQuestion(event) {
   event.preventDefault();
   const options = ["optionA", "optionB", "optionC", "optionD"].map(id => document.querySelector(`#${id}`).value.trim());
   quizzes.push({ id: `q${Date.now()}`, topic: Number(document.querySelector("#questionTopic").value), text: document.querySelector("#questionText").value.trim(), options, answer: Number(document.querySelector("#correctAnswer").value) });
-  localStorage.setItem(QUIZ_KEY, JSON.stringify(quizzes));
+  geoquestStore.saveQuiz(quizzes[quizzes.length - 1]);
   event.target.reset(); renderQuestionManager(); showToast("Quiz question added.");
 }
 
@@ -356,7 +379,7 @@ function deleteQuestion(event) {
   const button = event.target.closest("[data-question-id]");
   if (!button || !confirm("Delete this quiz question?")) return;
   quizzes = quizzes.filter(question => question.id !== button.dataset.questionId);
-  localStorage.setItem(QUIZ_KEY, JSON.stringify(quizzes)); renderQuestionManager(); showToast("Question deleted.");
+  geoquestStore.deleteQuiz(button.dataset.questionId); renderQuestionManager(); showToast("Question deleted.");
 }
 
 function loadRulesForm() {
@@ -369,7 +392,7 @@ function loadRulesForm() {
 function saveRules(event) {
   event.preventDefault();
   rules = { pointsPerCorrect: Number(document.querySelector("#pointsPerCorrect").value), maxAttempts: Number(document.querySelector("#maxAttempts").value), passPercentage: Number(document.querySelector("#passPercentage").value), attemptRule: document.querySelector("#attemptRule").value };
-  localStorage.setItem(RULES_KEY, JSON.stringify(rules)); showToast("Scoring rules saved.");
+  geoquestStore.saveRules(rules); showToast("Scoring rules saved.");
 }
 
 function renderAttempts() {
@@ -381,16 +404,24 @@ function renderAttempts() {
 
 function clearAttempts() {
   if (!attempts.length || !confirm("Clear all recorded quiz attempts?")) return;
-  attempts = []; localStorage.setItem(ATTEMPTS_KEY, "[]"); renderAttempts(); showToast("Attempt history cleared.");
+  attempts = []; geoquestStore.clearAttempts(); renderAttempts(); showToast("Attempt history cleared.");
 }
 
 function initializeQuizPage() {
-  const studentSelect = document.querySelector("#quizStudent");
-  studentSelect.innerHTML = `<option value="">Select your name</option>${OFFICIAL_STUDENTS.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
+  studentAuth.ensure().then(() => connectRealtime()).catch(() => showToast("Firebase student access is not enabled yet."));
+  initializeQuizStudentOptions();
   document.querySelector("#quizTopic").innerHTML = topicOptions();
   document.querySelector("#loadQuiz").addEventListener("click", loadQuiz);
   document.querySelector("#quizForm").addEventListener("submit", submitQuiz);
   document.querySelector("#retryQuiz").addEventListener("click", () => { document.querySelector("#resultPanel").hidden = true; document.querySelector("#quizPanel").hidden = true; });
+}
+
+function initializeQuizStudentOptions() {
+  const studentSelect = document.querySelector("#quizStudent");
+  if (!studentSelect) return;
+  const selected = studentSelect.value;
+  studentSelect.innerHTML = `<option value="">Select your name</option>${students.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
+  if (students.some(student => student.id === selected)) studentSelect.value = selected;
 }
 
 function loadQuiz() {
@@ -408,7 +439,7 @@ function loadQuiz() {
   document.querySelector("#attemptNotice").textContent = `${rules.maxAttempts - previous} attempt(s) available for this topic.`;
 }
 
-function submitQuiz(event) {
+async function submitQuiz(event) {
   event.preventDefault();
   const studentId = document.querySelector("#quizStudent").value;
   const topic = Number(document.querySelector("#quizTopic").value);
@@ -422,7 +453,7 @@ function submitQuiz(event) {
   const percentage = Math.round((correct / topicQuestions.length) * 100);
   const student = students.find(item => item.id === studentId);
   const attempt = { id: Date.now(), date: new Date().toISOString(), studentId, studentName: student.name, topic, correct, total: topicQuestions.length, points: correct * rules.pointsPerCorrect, percentage, passed: percentage >= rules.passPercentage };
-  attempts.push(attempt); localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts));
+  attempts.push(attempt); await geoquestStore.saveAttempt(attempt);
   const topicAttempts = attempts.filter(item => item.studentId === studentId && item.topic === topic);
   let scoringAttempt = topicAttempts[topicAttempts.length - 1];
   if (rules.attemptRule === "first") scoringAttempt = topicAttempts[0];
