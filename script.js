@@ -243,17 +243,28 @@ function initializeAdminPage() {
 
   lecturerAuth.observe(async user => {
     if (lecturerAuth.isLecturer(user)) {
-      const seedStudents = OFFICIAL_STUDENTS.map((student, index) => ({ ...student, rank: index + 1, total: 0, percentage: 0, badge: badgeFor(0), topicBadges: topicBadgesFor(student) }));
-      await geoquestStore.seed({ students: seedStudents, quizzes: DEFAULT_QUIZZES, rules: DEFAULT_RULES, badges: TOPIC_BADGES });
-      connectRealtime({ includeAttempts: true });
       unlockAdmin();
+      connectRealtime({ includeAttempts: true });
+      try {
+        const seedStudents = OFFICIAL_STUDENTS.map((student, index) => ({ ...student, rank: index + 1, total: 0, percentage: 0, badge: badgeFor(0), topicBadges: topicBadgesFor(student) }));
+        const seeded = await geoquestStore.seed({ students: seedStudents, quizzes: DEFAULT_QUIZZES, rules: DEFAULT_RULES, badges: TOPIC_BADGES });
+        if (seeded) showToast("Firebase database initialized successfully.");
+      } catch (error) {
+        showToast(error.code === "permission-denied" ? "Login succeeded, but Firestore lecturer permission was denied." : "Login succeeded, but Firebase data initialization failed.");
+        console.error("GeoQuest Firebase initialization:", error);
+      }
     }
   });
 
   pinForm.addEventListener("submit", async event => {
     event.preventDefault();
     try { await lecturerAuth.signIn(emailInput.value.trim(), pinInput.value); pinError.textContent = ""; }
-    catch { pinError.textContent = "Invalid lecturer email or password."; pinInput.value = ""; pinInput.focus(); }
+    catch (error) {
+      const messages = { "auth/invalid-credential": "Email atau kata laluan tidak sah.", "auth/user-not-found": "Akaun pensyarah tidak ditemui.", "auth/wrong-password": "Kata laluan tidak sah.", "auth/too-many-requests": "Terlalu banyak percubaan. Cuba lagi kemudian.", "auth/unauthorized-domain": "Domain GitHub Pages belum dibenarkan dalam Firebase Authentication." };
+      pinError.textContent = messages[error.code] || `Log masuk gagal: ${error.code || "ralat Firebase"}`;
+      pinInput.value = "";
+      pinInput.focus();
+    }
   });
 
   document.querySelector("#logoutButton").addEventListener("click", async () => {
