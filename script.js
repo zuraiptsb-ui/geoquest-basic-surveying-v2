@@ -20,7 +20,7 @@ const DEFAULT_QUIZZES = [
   { id: "q10", topic: 4, text: "Land administration records primarily support what?", options: ["Ownership and interests", "Weather forecasts", "Vehicle licensing", "Marine biology"], answer: 0 }
 ];
 
-const sampleStudents = [
+const OFFICIAL_STUDENTS = [
   { id: "16DGU26F1001", name: "MUHAMMAD UMAR AZ-ZUHDI BIN MOHD AKHIR", className: "DGU1B", scores: [0, 0, 0, 0, 0] },
   { id: "16DGU26F1005", name: "NURUL QAISARA BINTI MOHAMAD AZIM", className: "DGU1B", scores: [0, 0, 0, 0, 0] },
   { id: "16DGU26F1009", name: "DANISH NORMAN ZIKRY BIN ZULKAFLI", className: "DGU1B", scores: [0, 0, 0, 0, 0] },
@@ -64,12 +64,12 @@ const searchInput = document.querySelector("#searchInput");
 function loadStudents() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!Array.isArray(saved)) return structuredClone(sampleStudents);
-    return sampleStudents.map(rosterStudent => {
+    if (!Array.isArray(saved)) return structuredClone(OFFICIAL_STUDENTS);
+    return OFFICIAL_STUDENTS.map(rosterStudent => {
       const savedStudent = saved.find(student => String(student.id) === rosterStudent.id);
       return savedStudent ? { ...rosterStudent, scores: normalizeScores(savedStudent.scores) } : structuredClone(rosterStudent);
     });
-  } catch { return structuredClone(sampleStudents); }
+  } catch { return structuredClone(OFFICIAL_STUDENTS); }
 }
 
 function loadJson(key, fallback) {
@@ -225,7 +225,7 @@ function initializeAdminPage() {
 function syncStudentOptions() {
   const select = document.querySelector("#studentName");
   const selectedId = select.value;
-  select.innerHTML = `<option value="">Select a student</option>${sampleStudents.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
+  select.innerHTML = `<option value="">Select a student</option>${OFFICIAL_STUDENTS.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
   if (students.some(student => student.id === selectedId)) select.value = selectedId;
 }
 
@@ -330,7 +330,7 @@ function clearAttempts() {
 
 function initializeQuizPage() {
   const studentSelect = document.querySelector("#quizStudent");
-  studentSelect.innerHTML = `<option value="">Select your name</option>${sampleStudents.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
+  studentSelect.innerHTML = `<option value="">Select your name</option>${OFFICIAL_STUDENTS.map(student => `<option value="${student.id}">${student.id} — ${escapeHtml(student.name)}</option>`).join("")}`;
   document.querySelector("#quizTopic").innerHTML = topicOptions();
   document.querySelector("#loadQuiz").addEventListener("click", loadQuiz);
   document.querySelector("#quizForm").addEventListener("submit", submitQuiz);
