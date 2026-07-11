@@ -135,11 +135,11 @@ function escapeHtml(value) {
 }
 
 function badgeFor(total) {
-  if (total >= 90) return { name: "Legend", icon: "◆", className: "legend" };
-  if (total >= 80) return { name: "Master", icon: "★", className: "master" };
-  if (total >= 70) return { name: "Pathfinder", icon: "▲", className: "pathfinder" };
-  if (total >= 50) return { name: "Explorer", icon: "●", className: "explorer" };
-  return { name: "Rookie", icon: "⬡", className: "rookie" };
+  if (total >= 90) return { name: "GeoQuest Master Surveyor", icon: "⌖", className: "master-surveyor", description: "Elite mastery across surveying missions." };
+  if (total >= 80) return { name: "Expert Surveyor", icon: "★", className: "expert", description: "Advanced precision and technical confidence." };
+  if (total >= 60) return { name: "Skilled Surveyor", icon: "▲", className: "skilled", description: "Reliable field knowledge and practical skill." };
+  if (total >= 40) return { name: "Junior Surveyor", icon: "◆", className: "junior", description: "Developing competence across core topics." };
+  return { name: "Survey Rookie", icon: "⬡", className: "rookie", description: "Beginning the GeoQuest surveying journey." };
 }
 
 function rankedStudents() {
@@ -164,7 +164,7 @@ function renderLeaderboard() {
       ${student.scores.map(score => `<td>${score}</td>`).join("")}
       <td class="progress-cell"><div class="progress-label"><span>Progress</span><span>${total}%</span></div><div class="progress-track"><i style="width:${total}%"></i></div></td>
       <td class="total-cell"><strong>${total}</strong><small>${total}%</small></td>
-      <td><span class="badge badge-${badge.className}">${badge.icon}</span><span class="badge-name">${badge.name}</span></td>
+      <td><div class="achievement-badge"><span class="badge badge-${badge.className}">${badge.icon}</span><span><strong>${badge.name}</strong><small>${badge.description}</small></span></div></td>
     </tr>`;
   }).join("");
 
@@ -414,7 +414,8 @@ function submitQuiz(event) {
   student.scores[topic] = Math.round(scoringAttempt.percentage / 5);
   saveStudents();
   document.querySelector("#quizPanel").hidden = true; document.querySelector("#resultPanel").hidden = false;
-  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
+  const overallBadge = badgeFor(totalOf(student));
+  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><div class="quiz-achievement badge-${overallBadge.className}"><span class="achievement-icon">${overallBadge.icon}</span><div><small>Overall achievement</small><strong>${overallBadge.name}</strong><p>${overallBadge.description}</p></div></div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
 }
 
 if (pageType === "admin") initializeAdminPage();
