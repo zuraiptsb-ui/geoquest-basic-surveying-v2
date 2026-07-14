@@ -27,9 +27,6 @@ service cloud.firestore {
           "completionStatus", "lastAttemptId", "lastAttemptUid",
           "lastSubmittedTopic", "updatedAt"
         ])
-        && request.resource.data.id == studentId
-        && request.resource.data.name == resource.data.name
-        && request.resource.data.className == resource.data.className
         && request.resource.data.lastAttemptUid == request.auth.uid
         && request.resource.data.lastSubmittedTopic is number
         && request.resource.data.lastSubmittedTopic >= 0
