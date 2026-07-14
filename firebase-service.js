@@ -44,8 +44,32 @@ export const geoquestStore = {
     const submittedAttempt = { ...attempt, id: attemptId, createdAt: serverTimestamp(), submittedBy: user.uid };
     const batch = writeBatch(db);
     batch.set(doc(db, "attempts", attemptId), submittedAttempt);
-    batch.set(doc(db, "students", student.id), { ...student, lastAttemptId: attemptId, lastAttemptUid: user.uid, lastSubmittedTopic: attempt.topic, updatedAt: serverTimestamp() }, { merge: true });
-    batch.set(doc(db, "rankings", student.id), { ...ranking, lastAttemptId: attemptId, lastAttemptUid: user.uid, updatedAt: serverTimestamp() }, { merge: true });
+    // Send only fields that a quiz is allowed to change. Spreading the entire
+    // Firestore record also sent legacy metadata and caused affectedKeys() in
+    // the security rule to reject otherwise valid submissions.
+    batch.set(doc(db, "students", student.id), {
+      scores: student.scores,
+      total: student.total,
+      percentage: student.percentage,
+      badge: student.badge,
+      topicBadges: student.topicBadges,
+      completionStatus: student.completionStatus,
+      lastAttemptId: attemptId,
+      lastAttemptUid: user.uid,
+      lastSubmittedTopic: attempt.topic,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    batch.set(doc(db, "rankings", student.id), {
+      studentId: ranking.studentId,
+      name: ranking.name,
+      rank: ranking.rank,
+      total: ranking.total,
+      percentage: ranking.percentage,
+      badge: ranking.badge,
+      lastAttemptId: attemptId,
+      lastAttemptUid: user.uid,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
     await batch.commit();
     return { ...submittedAttempt, createdAt: new Date().toISOString() };
   },
