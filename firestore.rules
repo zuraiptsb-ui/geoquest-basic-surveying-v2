@@ -20,17 +20,6 @@ service cloud.firestore {
         && scores[4] is number && scores[4] >= 0 && scores[4] <= 20;
     }
 
-    function quizAttemptPath(attemptId) {
-      return /databases/$(database)/documents/attempts/$(attemptId);
-    }
-
-    function matchingSubmittedAttempt(studentId) {
-      return request.resource.data.lastAttemptId is string
-        && getAfter(quizAttemptPath(request.resource.data.lastAttemptId)).data.studentId == studentId
-        && getAfter(quizAttemptPath(request.resource.data.lastAttemptId)).data.submittedBy == request.auth.uid
-        && getAfter(quizAttemptPath(request.resource.data.lastAttemptId)).data.topic == request.resource.data.lastSubmittedTopic;
-    }
-
     function validAnonymousStudentScoreUpdate(studentId) {
       return isAnonymousStudent()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -45,10 +34,10 @@ service cloud.firestore {
         && request.resource.data.lastSubmittedTopic is number
         && request.resource.data.lastSubmittedTopic >= 0
         && request.resource.data.lastSubmittedTopic < 5
+        && request.resource.data.lastAttemptId is string
         && validScores(request.resource.data.scores)
         && request.resource.data.total == request.resource.data.scores[0] + request.resource.data.scores[1] + request.resource.data.scores[2] + request.resource.data.scores[3] + request.resource.data.scores[4]
-        && request.resource.data.percentage == request.resource.data.total
-        && matchingSubmittedAttempt(studentId);
+        && request.resource.data.percentage == request.resource.data.total;
     }
 
     function validAnonymousAttemptCreate() {
@@ -90,9 +79,7 @@ service cloud.firestore {
         || (isAnonymousStudent()
           && request.resource.data.studentId == studentId
           && request.resource.data.lastAttemptUid == request.auth.uid
-          && request.resource.data.lastAttemptId is string
-          && getAfter(quizAttemptPath(request.resource.data.lastAttemptId)).data.studentId == studentId
-          && getAfter(quizAttemptPath(request.resource.data.lastAttemptId)).data.submittedBy == request.auth.uid);
+          && request.resource.data.lastAttemptId is string);
     }
 
     match /badges/{badgeId} {
