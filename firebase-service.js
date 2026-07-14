@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -27,7 +27,7 @@ const watch = (name, callback, sorter) => onSnapshot(sorter ? query(collection(d
 export const geoquestStore = {
   watchStudents: callback => watch("students", callback),
   watchQuizzes: callback => watch("quizzes", callback),
-  watchAttempts: callback => watch("attempts", callback, { field: "createdAt", direction: "desc" }),
+  watchAttempts: callback => watch("attempts", records => callback(records.filter(record => !record.system)), { field: "createdAt", direction: "desc" }),
   watchRankings: callback => watch("rankings", callback, { field: "rank", direction: "asc" }),
   watchRules: callback => onSnapshot(doc(db, "settings", "scoring"), snapshot => callback(snapshot.exists() ? snapshot.data() : null)),
   async saveLeaderboard(studentRecords) {
@@ -89,14 +89,52 @@ export const geoquestStore = {
     await batch.commit();
   },
   async seed({ students, quizzes, rules, badges }) {
-    const existing = await getDocs(collection(db, "students"));
-    if (!existing.empty) return false;
-    const batch = writeBatch(db);
-    students.forEach(student => batch.set(doc(db, "students", student.id), student));
-    quizzes.forEach(question => batch.set(doc(db, "quizzes", question.id), question));
-    badges.forEach((badge, index) => batch.set(doc(db, "badges", `topic-${index + 1}`), badge));
-    batch.set(doc(db, "settings", "scoring"), rules);
-    await batch.commit();
-    return true;
+    const seedMarker = doc(db, "settings", "database-seed");
+    return runTransaction(db, async transaction => {
+      const marker = await transaction.get(seedMarker);
+      if (marker.exists()) return false;
+
+      students.forEach(student => {
+        transaction.set(doc(db, "students", student.id), {
+          ...student,
+          updatedAt: serverTimestamp()
+        });
+        transaction.set(doc(db, "rankings", student.id), {
+          studentId: student.id,
+          name: student.name,
+          rank: student.rank,
+          total: student.total,
+          percentage: student.percentage,
+          badge: student.badge,
+          updatedAt: serverTimestamp()
+        });
+      });
+      quizzes.forEach(question => transaction.set(doc(db, "quizzes", question.id), {
+        ...question,
+        updatedAt: serverTimestamp()
+      }));
+      badges.forEach((badge, index) => transaction.set(doc(db, "badges", badge.id || `badge-${index + 1}`), {
+        ...badge,
+        updatedAt: serverTimestamp()
+      }));
+      transaction.set(doc(db, "attempts", "_seed"), {
+        system: true,
+        description: "Collection initialization marker",
+        createdAt: serverTimestamp()
+      });
+      transaction.set(doc(db, "settings", "scoring"), {
+        ...rules,
+        updatedAt: serverTimestamp()
+      });
+      transaction.set(seedMarker, {
+        version: 1,
+        studentCount: students.length,
+        quizCount: quizzes.length,
+        badgeCount: badges.length,
+        completed: true,
+        seededAt: serverTimestamp()
+      });
+      return true;
+    });
   }
 };

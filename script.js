@@ -269,7 +269,15 @@ function initializeAdminPage() {
       connectRealtime({ includeAttempts: true });
       try {
         const seedStudents = OFFICIAL_STUDENTS.map((student, index) => ({ ...student, rank: index + 1, total: 0, percentage: 0, badge: badgeFor(0), topicBadges: topicBadgesFor(student) }));
-        const seeded = await geoquestStore.seed({ students: seedStudents, quizzes: DEFAULT_QUIZZES, rules: DEFAULT_RULES, badges: TOPIC_BADGES });
+        const seedBadges = [
+          { id: "overall-rookie", type: "overall", minPercentage: 0, maxPercentage: 39, ...badgeFor(0) },
+          { id: "overall-junior", type: "overall", minPercentage: 40, maxPercentage: 59, ...badgeFor(40) },
+          { id: "overall-skilled", type: "overall", minPercentage: 60, maxPercentage: 79, ...badgeFor(60) },
+          { id: "overall-expert", type: "overall", minPercentage: 80, maxPercentage: 89, ...badgeFor(80) },
+          { id: "overall-master", type: "overall", minPercentage: 90, maxPercentage: 100, ...badgeFor(90) },
+          ...TOPIC_BADGES.map((badge, index) => ({ id: `topic-${index + 1}`, type: "topic", topic: index, threshold: 80, ...badge }))
+        ];
+        const seeded = await geoquestStore.seed({ students: seedStudents, quizzes: DEFAULT_QUIZZES, rules: DEFAULT_RULES, badges: seedBadges });
         if (seeded) showToast("Firebase database initialized successfully.");
       } catch (error) {
         showToast(error.code === "permission-denied" ? "Login succeeded, but Firestore lecturer permission was denied." : "Login succeeded, but Firebase data initialization failed.");
