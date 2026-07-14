@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -15,7 +15,11 @@ export const lecturerAuth = {
 };
 
 export const studentAuth = {
-  ensure: () => auth.currentUser ? Promise.resolve(auth.currentUser) : signInAnonymously(auth).then(result => result.user)
+  async ensure() {
+    if (auth.currentUser?.isAnonymous) return auth.currentUser;
+    if (auth.currentUser) await signOut(auth);
+    return signInAnonymously(auth).then(result => result.user);
+  }
 };
 
 const watch = (name, callback, sorter) => onSnapshot(sorter ? query(collection(db, name), orderBy(sorter.field, sorter.direction)) : collection(db, name), snapshot => callback(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))));
@@ -34,7 +38,17 @@ export const geoquestStore = {
     });
     await batch.commit();
   },
-  saveAttempt: attempt => addDoc(collection(db, "attempts"), { ...attempt, createdAt: serverTimestamp(), submittedBy: auth.currentUser?.uid || null }),
+  async submitAttempt({ attempt, student, ranking }) {
+    const user = await studentAuth.ensure();
+    const attemptId = `${attempt.studentId}-${attempt.topic}-${Date.now()}`;
+    const submittedAttempt = { ...attempt, id: attemptId, createdAt: serverTimestamp(), submittedBy: user.uid };
+    const batch = writeBatch(db);
+    batch.set(doc(db, "attempts", attemptId), submittedAttempt);
+    batch.set(doc(db, "students", student.id), { ...student, lastAttemptId: attemptId, lastAttemptUid: user.uid, lastSubmittedTopic: attempt.topic, updatedAt: serverTimestamp() }, { merge: true });
+    batch.set(doc(db, "rankings", student.id), { ...ranking, lastAttemptId: attemptId, lastAttemptUid: user.uid, updatedAt: serverTimestamp() }, { merge: true });
+    await batch.commit();
+    return { ...submittedAttempt, createdAt: new Date().toISOString() };
+  },
   saveQuiz: question => setDoc(doc(db, "quizzes", question.id), { ...question, updatedAt: serverTimestamp() }, { merge: true }),
   deleteQuiz: id => deleteDoc(doc(db, "quizzes", id)),
   async deleteStudent(id) {

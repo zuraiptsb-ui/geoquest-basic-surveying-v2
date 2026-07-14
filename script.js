@@ -153,6 +153,20 @@ function topicBadgesFor(student) {
   return TOPIC_BADGES.map((badge, index) => ({ ...badge, topic: index, percentage: student.scores[index] * 5, earned: student.scores[index] >= 16 }));
 }
 
+function completionStatusFor(student) {
+  const completedTopics = normalizeScores(student.scores).filter(score => score > 0).length;
+  return { completedTopics, totalTopics: TOPICS.length, complete: completedTopics === TOPICS.length };
+}
+
+function decorateStudentRecord(student) {
+  const scores = normalizeScores(student.scores);
+  const total = scores.reduce((sum, score) => sum + Number(score), 0);
+  const decorated = { ...student, scores, total, percentage: total, badge: badgeFor(total) };
+  decorated.topicBadges = topicBadgesFor(decorated);
+  decorated.completionStatus = completionStatusFor(decorated);
+  return decorated;
+}
+
 function renderTopicBadges(student, detailed = false) {
   return topicBadgesFor(student).map(badge => `<div class="topic-achievement ${badge.earned ? "earned" : "locked"}" title="${escapeHtml(badge.name)}: ${badge.percentage}%"><span class="topic-icon">${badge.earned ? badge.icon : "⌑"}</span><div><strong>${badge.name}</strong>${detailed ? `<small>${badge.earned ? badge.description : `Locked · ${badge.percentage}% of 80%`}</small>` : ""}<i><b style="width:${Math.min(100, badge.percentage / .8)}%"></b></i></div><em>${badge.earned ? "Earned" : `${badge.percentage}%`}</em></div>`).join("");
 }
@@ -212,6 +226,14 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
+function quizStatus(message, type = "info") {
+  const notice = document.querySelector("#attemptNotice");
+  if (!notice) return showToast(message);
+  notice.textContent = message;
+  notice.classList.remove("success", "error");
+  notice.classList.add(type);
 }
 
 function initializeStudentPage() {
@@ -452,31 +474,69 @@ function loadQuiz() {
 
 async function submitQuiz(event) {
   event.preventDefault();
-  const studentId = document.querySelector("#quizStudent").value;
+  const submitButton = event.submitter || document.querySelector(".quiz-submit");
+  const studentSelect = document.querySelector("#quizStudent");
+  const studentId = studentSelect.value;
   const topic = Number(document.querySelector("#quizTopic").value);
   const topicQuestions = quizzes.filter(question => question.topic === topic);
-  const submissionKey = `${studentId}-${topic}-${topicQuestions.map(question => document.querySelector(`input[name="answer-${question.id}"]:checked`)?.value ?? "x").join("")}`;
+  const student = students.find(item => item.id === studentId);
+  const selectedLabel = studentSelect.selectedOptions[0]?.textContent || "";
+  if (!student || student.id !== studentId || !selectedLabel.includes(student.name)) {
+    return quizStatus("Selected student name and matrix number do not match an existing student record.", "error");
+  }
+  if (!topicQuestions.length) return quizStatus("No questions are available for this topic.", "error");
+  const selectedSignature = topicQuestions.map(question => {
+    const selected = document.querySelector(`input[name="answer-${question.id}"]:checked`);
+    return selected?.value ?? "x";
+  }).join("");
+  const submissionKey = `${studentId}-${topic}-${selectedSignature}`;
   const previousSubmission = JSON.parse(sessionStorage.getItem("geoquest-last-submission") || "null");
   if (previousSubmission?.key === submissionKey && Date.now() - previousSubmission.time < 30000) return showToast("This submission was already received.");
-  sessionStorage.setItem("geoquest-last-submission", JSON.stringify({ key: submissionKey, time: Date.now() }));
+
   let correct = 0;
-  topicQuestions.forEach(question => { const choice = document.querySelector(`input[name="answer-${question.id}"]:checked`); if (Number(choice?.value) === question.answer) correct++; });
+  const answers = topicQuestions.map(question => {
+    const choice = document.querySelector(`input[name="answer-${question.id}"]:checked`);
+    const selected = Number(choice?.value);
+    const correctAnswer = Number(question.answer);
+    const isCorrect = selected === correctAnswer;
+    if (isCorrect) correct++;
+    return { questionId: question.id, selected, correctAnswer, isCorrect };
+  });
   const percentage = Math.round((correct / topicQuestions.length) * 100);
-  const student = students.find(item => item.id === studentId);
-  const attempt = { id: Date.now(), date: new Date().toISOString(), studentId, studentName: student.name, topic, correct, total: topicQuestions.length, points: correct * rules.pointsPerCorrect, percentage, passed: percentage >= rules.passPercentage };
-  attempts.push(attempt); await geoquestStore.saveAttempt(attempt);
-  const topicAttempts = attempts.filter(item => item.studentId === studentId && item.topic === topic);
+  const attempt = { date: new Date().toISOString(), studentId, studentName: student.name, topic, topicName: TOPIC_NAMES[topic], answers, correct, incorrect: topicQuestions.length - correct, total: topicQuestions.length, points: correct * rules.pointsPerCorrect, scoreOutOfTen: correct, percentage, passed: percentage >= rules.passPercentage };
+  const topicAttempts = [...attempts, attempt].filter(item => item.studentId === studentId && item.topic === topic);
   let scoringAttempt = topicAttempts[topicAttempts.length - 1];
   if (rules.attemptRule === "first") scoringAttempt = topicAttempts[0];
   if (rules.attemptRule === "highest") scoringAttempt = topicAttempts.reduce((best, item) => item.percentage > best.percentage ? item : best, topicAttempts[0]);
+
   const badgeWasEarned = student.scores[topic] >= 16;
-  student.scores[topic] = Math.round(scoringAttempt.percentage / 5);
-  const badgeNowEarned = student.scores[topic] >= 16;
-  saveStudents();
-  document.querySelector("#quizPanel").hidden = true; document.querySelector("#resultPanel").hidden = false;
-  const overallBadge = badgeFor(totalOf(student));
-  document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed · Passed" : "Completed · More practice required"}</span></div><div class="result-details"><p><span>Score</span><strong>${attempt.points} points</strong></p><p><span>Correct answers</span><strong>${correct}</strong></p><p><span>Incorrect answers</span><strong>${topicQuestions.length - correct}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${student.scores[topic]} / 20</strong></p></div><div class="quiz-achievement badge-${overallBadge.className}"><span class="achievement-icon">${overallBadge.icon}</span><div><small>Overall achievement</small><strong>${overallBadge.name}</strong><p>${overallBadge.description}</p></div></div><div class="quiz-topic-badges">${renderTopicBadges(student, true)}</div><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
-  if (!badgeWasEarned && badgeNowEarned) celebrateTopicBadge(TOPIC_BADGES[topic]);
+  const updatedStudent = decorateStudentRecord({ ...student, scores: normalizeScores(student.scores).map((score, index) => index === topic ? Math.round(scoringAttempt.percentage / 5) : score) });
+  const previewRank = [...students.filter(item => item.id !== updatedStudent.id), updatedStudent].sort((a, b) => totalOf(b) - totalOf(a) || a.name.localeCompare(b.name)).findIndex(item => item.id === updatedStudent.id) + 1;
+  const ranking = { studentId: updatedStudent.id, name: updatedStudent.name, rank: previewRank, total: updatedStudent.total, percentage: updatedStudent.percentage, badge: updatedStudent.badge };
+
+  try {
+    if (submitButton) submitButton.disabled = true;
+    quizStatus("Saving quiz score...", "info");
+    const savedAttempt = await geoquestStore.submitAttempt({ attempt, student: updatedStudent, ranking });
+    attempts.push(savedAttempt);
+    students = students.map(item => item.id === updatedStudent.id ? updatedStudent : item);
+    sessionStorage.setItem("geoquest-last-submission", JSON.stringify({ key: submissionKey, time: Date.now() }));
+    const badgeNowEarned = updatedStudent.scores[topic] >= 16;
+    document.querySelector("#quizPanel").hidden = true;
+    document.querySelector("#resultPanel").hidden = false;
+    const overallBadge = badgeFor(totalOf(updatedStudent));
+    document.querySelector("#resultContent").innerHTML = `<div class="result-score ${attempt.passed ? "passed" : "retry"}"><strong>${percentage}%</strong><span>${attempt.passed ? "Completed - Passed" : "Completed - More practice required"}</span></div><div class="result-details"><p><span>Number correct</span><strong>${correct}</strong></p><p><span>Number incorrect</span><strong>${attempt.incorrect}</strong></p><p><span>Score out of 10</span><strong>${correct} / ${topicQuestions.length}</strong></p><p><span>Percentage</span><strong>${percentage}%</strong></p><p><span>Recorded topic score</span><strong>${updatedStudent.scores[topic]} / 20</strong></p></div><div class="quiz-achievement badge-${overallBadge.className}"><span class="achievement-icon">${overallBadge.icon}</span><div><small>Overall achievement</small><strong>${overallBadge.name}</strong><p>${overallBadge.description}</p></div></div><div class="quiz-topic-badges">${renderTopicBadges(updatedStudent, true)}</div><p class="scoring-note success">Score saved successfully.</p><p class="scoring-note">Recorded using the <strong>${rules.attemptRule || "highest"} attempt</strong> rule.</p>`;
+    quizStatus("Score saved successfully.", "success");
+    showToast("Score saved successfully.");
+    if (!badgeWasEarned && badgeNowEarned) celebrateTopicBadge(TOPIC_BADGES[topic]);
+  } catch (error) {
+    const message = `${error.code || "firebase/error"}: ${error.message || "Quiz score could not be saved."}`;
+    quizStatus(message, "error");
+    document.querySelector("#resultPanel").hidden = false;
+    document.querySelector("#resultContent").innerHTML = `<div class="result-score retry"><strong>Save failed</strong><span>Firebase rejected the quiz submission</span></div><p class="scoring-note error">${escapeHtml(message)}</p>`;
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
 }
 
 function celebrateTopicBadge(badge) {
